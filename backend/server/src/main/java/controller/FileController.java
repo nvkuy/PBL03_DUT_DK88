@@ -14,28 +14,42 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import model.FileHandler;
 import model.ResponseObject;
+import service.FileService;
+import service.TokenService;
 
 @RestController
 @RequestMapping(path = "/api/v1/File")
 public class FileController {
 	
-	@GetMapping("")
+	@GetMapping("/")
 	String test() {
 		return "OK";
 	}
 	
 	@PostMapping("/UploadImage")
 	ResponseEntity<ResponseObject> uploadFile(@RequestHeader("token") String token, @RequestParam("file") MultipartFile file) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to upload file!", null));
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(FileHandler.getInstance().saveImage(file, token));
+				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
+				.body(FileService.getInstance().saveImage(file, token));
 	}
 	
 	@GetMapping("/GetImage/{fileName:.+}")
 	ResponseEntity<ResponseObject> getImage(@RequestHeader("token") String token, @PathVariable String fileName) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to read file!", null));
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(FileHandler.getInstance().loadImage(fileName, token));
+				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
+				.body(FileService.getInstance().loadImage(fileName, token));
 	}
+	
+//	@GetMapping("/DelImage/{fileName:.+}")
+//	ResponseEntity<ResponseObject> delImage(@RequestHeader("token") String token, @PathVariable String fileName) {
+//		return ResponseEntity.status(HttpStatus.OK)
+//				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
+//				.body(FileService.getInstance().delImageIfExist(fileName, token));
+//	}
 	
 }

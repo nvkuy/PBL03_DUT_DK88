@@ -2,24 +2,24 @@ package model;
 
 public class User {
 	
-	public static final String USER_TYPE_ADMIN = "ADMIN";
-	public static final String USER_TYPE_STUDENT = "STUDENT";
+	public static final Integer ROLE_CODE_ADMIN = 0;
+	public static final Integer ROLE_CODE_STUDENT = 1;
 	
 	private String userName;
 	private String name;
 	private String phoneNumber;
-	private String token;
+	private Integer roleCode;
 	
 	public User() {
 		super();
 	}
 
-	public User(String userName, String name, String phoneNumber) {
+	public User(String userName, String name, String phoneNumber, Integer roleCode) {
 		super();
 		this.userName = userName;
 		this.name = name;
 		this.phoneNumber = phoneNumber;
-		this.token = DataHasher.hash(userName, name, phoneNumber);
+		this.roleCode = roleCode;
 	}
 
 	public String getUserName() {
@@ -46,20 +46,12 @@ public class User {
 		this.phoneNumber = phoneNumber;
 	}
 
-	public String getToken() {
-		return token;
+	public Integer getRoleCode() {
+		return roleCode;
 	}
 
-	public void setToken(String userName, String name, String phoneNumber) {
-		this.token = DataHasher.hash(userName, name, phoneNumber);
+	public void setRoleCode(Integer roleCode) {
+		this.roleCode = roleCode;
 	}
-
-	@Override
-	public String toString() {
-		// TODO Auto-generated method stub
-		return super.toString();
-	}
-	
-	
 	
 }
