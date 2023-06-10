@@ -1,12 +1,17 @@
 package service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import model.Admin;
+import model.Group;
 import model.ResponseObject;
 import model.Student;
 import model.User;
+import repository.ClassRepository;
+import repository.GroupRepository;
 import repository.UserRepository;
 
 public class UserService {
@@ -106,13 +111,47 @@ public class UserService {
 		if (User.ROLE_CODE_STUDENT.equals((Integer)token_data.get("roleCode")) && (Student.STATUS_BAN_USER.equals(studentStatus) || Student.STATUS_NEW_USER.equals(studentStatus)))
 			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Your account is not active!", null);
 		String userName = (String) data.get("userName");
-		if (!userName.equals((String)token_data.get("userName")))
+		if (User.ROLE_CODE_STUDENT.equals((Integer)token_data.get("roleCode")) && !userName.equals((String)token_data.get("userName")))
 			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "You not allow to change public info!", null);
 		return UserRepository.updatePublicInfo(data);
 	}
 	
 	public static ResponseObject readStudentInfo(String studentID) {
 		return UserRepository.readPublicInfo(studentID);
+	}
+	
+	public static ResponseObject readListStudentInfo(List<String> listStudentID) {
+		if (listStudentID.size() > Group.MAX_SIZE)
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Can't not read too much student info at a time!", null);
+		List<Map<String, Object>> res = new ArrayList<>();
+		for (String studentID : listStudentID) {
+			ResponseObject tmp = UserRepository.readPublicInfo(studentID);
+			if (tmp.getRespCode() == ResponseObject.RESPONSE_OK)
+				res.add((Map<String, Object>) tmp.getData());
+		}
+		return new ResponseObject(ResponseObject.RESPONSE_OK, "OK!", res);
+	}
+	
+	public static ResponseObject readAllStudentID(String token) {
+		Map<String, Object> token_data = TokenService.getDataFromToken(token);
+		if (!User.ROLE_CODE_ADMIN.equals((Integer)token_data.get("roleCode")))
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Only admin allow to read all student id!", null);
+		return new ResponseObject(ResponseObject.RESPONSE_OK, "OK!", UserRepository.readAllStudentID());
+	}
+	
+	public static ResponseObject changeUserStatus(String token, String studentID, Integer status) {
+		Map<String, Object> token_data = TokenService.getDataFromToken(token);
+		if (!User.ROLE_CODE_ADMIN.equals((Integer)token_data.get("roleCode")))
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Only admin allow to change student status!", null);
+		if (status.equals(Student.STATUS_BAN_USER) || status.equals(Student.STATUS_NEW_USER)) {
+			ClassRepository.delQueryByTargetID(studentID);
+			ClassRepository.insertResetQueryClass(studentID);
+			String groupID = GroupRepository.readGroupIDByStudentID(studentID);
+			GroupRepository.delGroup(groupID);
+			for (String id : groupID.split("-"))
+				GroupService.leaveGroup(id);
+		}
+		return UserRepository.updateAccountStatus(studentID, status);
 	}
 	
 }

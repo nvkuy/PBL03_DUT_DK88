@@ -38,7 +38,6 @@ public class GroupController {
 		if (!TokenService.isValidToken(token))
 			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to read group data!", null));
 		return ResponseEntity.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(GroupService.getJoinedGroupID(token, studentID));
 	}
 	
@@ -47,8 +46,15 @@ public class GroupController {
 		if (!TokenService.isValidToken(token))
 			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to read group data!", null));
 		return ResponseEntity.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(GroupService.readGroupInfo(token, groupID));
+	}
+	
+	@PostMapping("/ListInfo")
+	ResponseEntity<ResponseObject> getListGroupInfo(@RequestHeader("token") String token, @RequestBody List<String> listGroupID) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to read group data!", null));
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(GroupService.readListGroupInfo(token, listGroupID));
 	}
 	
 	@PostMapping("/VoteGroup")
@@ -56,7 +62,6 @@ public class GroupController {
 		if (!TokenService.isValidToken(token))
 			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to read group data!", null));
 		return ResponseEntity.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(GroupService.voteGroup(token, data));
 	}
 }

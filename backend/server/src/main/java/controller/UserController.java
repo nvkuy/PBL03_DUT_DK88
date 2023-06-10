@@ -1,6 +1,7 @@
 package controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -100,7 +101,6 @@ public class UserController {
 		String newHashPass = (String) body.get("newHashPass");
 		return ResponseEntity
 				.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(UserService.changePassword(token, userName, oldHashPass, newHashPass));
 	}
 	
@@ -110,7 +110,6 @@ public class UserController {
 			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again to change info!", null));
 		return ResponseEntity
 				.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(UserService.changePublicInfo(token, body));
 	}
 	
@@ -121,8 +120,34 @@ public class UserController {
 		
 		return ResponseEntity
 				.status(HttpStatus.OK)
-				.header("token", TokenService.generateToken(TokenService.getDataFromToken(token)))
 				.body(UserService.readStudentInfo(studentID));
+	}
+	
+	@PostMapping("/ReadListPublicInfo")
+	ResponseEntity<ResponseObject> readListPublicInfo(@RequestHeader("token") String token, @RequestBody List<String> listStudentID) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again change student info!", null));
+		return ResponseEntity
+				.status(HttpStatus.OK)
+				.body(UserService.readListStudentInfo(listStudentID));
+	}
+	
+	@GetMapping("/ReadAllStudentID")
+	ResponseEntity<ResponseObject> readAllStudentID(@RequestHeader("token") String token) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again get student info!", null));
+		return ResponseEntity
+				.status(HttpStatus.OK)
+				.body(UserService.readAllStudentID(token));
+	}
+	
+	@PostMapping("/ChangeStudentStatus")
+	ResponseEntity<ResponseObject> changeStudentStatus(@RequestHeader("token") String token, @RequestBody Map<String, Object> body) {
+		if (!TokenService.isValidToken(token))
+			return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject(ResponseObject.RESPONSE_TOKEN_EXPIRED, "Login again change student info!", null));
+		return ResponseEntity
+				.status(HttpStatus.OK)
+				.body(UserService.changeUserStatus(token, (String)body.get("studentID"), (Integer)body.get("status")));
 	}
 	
 }

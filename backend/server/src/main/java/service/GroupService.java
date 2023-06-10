@@ -15,13 +15,15 @@ import repository.UserRepository;
 
 public class GroupService {
 	
+	public static final Integer MAX_GROUP_PER_PAGE = 11;
+	
 	public static Boolean isValidGroup(String groupID) {
 		List<String> students = Arrays.asList(groupID.split("-"));
 		if (students.size() > Group.MAX_SIZE || students.size() < 2) return false;
 		List<List<String>> classHave = new ArrayList<>();
 		List<String> classWant = new ArrayList<>();
 		for (String studentID : students) {
-			if (!UserRepository.readStudentStatus(studentID).equals(Student.STATUS_ACTIVE_NOGROUP_USER)) return false;
+//			if (!UserRepository.readStudentStatus(studentID).equals(Student.STATUS_ACTIVE_NOGROUP_USER)) return false;
 			Map<String, Object> tmp = ClassRepository.readClassByStudentID(studentID);
 			classHave.add((List<String>) tmp.get("haveClass"));
 			classWant.add((String) tmp.get("wantClass"));
@@ -53,6 +55,7 @@ public class GroupService {
 			GroupRepository.insertGroupStudentClass(groupID, students.get(i), classWant.get(i));
 			GroupRepository.insertGroupStudentClass(groupID, students.get((i + 1) % students.size()), classWant.get(i));
 		}
+		
 	}
 	
 	public static void joinGroup(String studentID, String groupID) {
@@ -73,8 +76,30 @@ public class GroupService {
 		if (!isValidGroup(groupID))
 			return new ResponseObject(ResponseObject.RESPONSE_OUTDATE_DATA, "Group not exist, waiting to system refresh and try again!", null);
 		Group group = GroupRepository.readGroupByID(groupID);
-		group.setStatus(Math.max(group.getStatus(), Group.STATUS_NEW_GROUP));
+		//group.setStatus(Math.max(group.getStatus(), Group.STATUS_NEW_GROUP));
+		if (group.getStatus().equals(Group.STATUS_NOT_EXIST_YET_GROUP))
+			group.setStatus(Group.STATUS_NEW_GROUP);
 		return new ResponseObject(ResponseObject.RESPONSE_OK, "OK!", group);
+	}
+	
+	public static ResponseObject readListGroupInfo(String token, List<String> listGroupID) {
+		Map<String, Object> token_data = TokenService.getDataFromToken(token);
+		Integer studentStatus = UserRepository.readStudentStatus((String)token_data.get("studentID"));
+		if (!User.ROLE_CODE_STUDENT.equals((Integer)token_data.get("roleCode")) || Student.STATUS_BAN_USER.equals(studentStatus) || Student.STATUS_NEW_USER.equals(studentStatus))
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Your account is not active!", null);
+		if (listGroupID.size() > MAX_GROUP_PER_PAGE)
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "!OK", null);
+		List<Group> listGroup = new ArrayList<>();
+		for (String groupID : listGroupID) {
+			if (!isValidGroup(groupID))
+				continue;
+			Group group = GroupRepository.readGroupByID(groupID);
+			//group.setStatus(Math.max(group.getStatus(), Group.STATUS_NEW_GROUP));
+			if (group.getStatus().equals(Group.STATUS_NOT_EXIST_YET_GROUP))
+				group.setStatus(Group.STATUS_NEW_GROUP);
+			listGroup.add(group);
+		}
+		return new ResponseObject(ResponseObject.RESPONSE_OK, "OK!", listGroup);
 	}
 	
 	public static ResponseObject voteGroup(String token, Map<String, String> data) {
@@ -88,13 +113,22 @@ public class GroupService {
 			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Your account not allow to vote!", null);
 		if (!isValidGroup(groupID))
 			return new ResponseObject(ResponseObject.RESPONSE_OUTDATE_DATA, "Group not exist, waiting to system refresh and try again!", null);
+		String oldGroupID = GroupRepository.readGroupIDByStudentID(studentID);
+		if (oldGroupID != null && GroupRepository.readGroupStatus(oldGroupID).equals(Group.STATUS_TRADE_GROUP) && !oldGroupID.equals(groupID))
+			return new ResponseObject(ResponseObject.RESPONSE_REQUEST_ERROR, "Can't change group when trade course!", null);
+		if (oldGroupID != null && !oldGroupID.equals(groupID)) {
+			Group oldGroup = GroupRepository.readGroupByID(oldGroupID);
+			oldGroup.getVoteYes().remove(studentID);
+			GroupRepository.saveGroup(oldGroup);
+			leaveGroup(studentID);
+		}
 		Group group = GroupRepository.readGroupByID(groupID);
 		if (group.getStatus().equals(Group.STATUS_NOT_EXIST_YET_GROUP)) {
 			createGroup(groupID);
 			group.setStatus(group.STATUS_NEW_GROUP);
 		}
 		if (group.getVoteYes().contains(studentID)) {
-			group.getVoteYes().remove(groupID);
+			group.getVoteYes().remove(studentID);
 			leaveGroup(studentID);
 		} else {
 			group.getVoteYes().add(studentID);
@@ -108,6 +142,7 @@ public class GroupService {
 			for (String id : students)
 				leaveGroup(id);
 			group.setStatus(Group.STATUS_NEW_GROUP);
+			group.getVoteYes().clear();
 		}
 		GroupRepository.saveGroup(group);
 		return new ResponseObject(ResponseObject.RESPONSE_OK, "OK!", null);

@@ -90,7 +90,7 @@ public class GroupRepository {
 			while (rs.next()) {
 				Boolean yes = rs.getBoolean("vote");
 				if (yes)
-					voteYes.add(rs.getString("groupID"));
+					voteYes.add(rs.getString("studentID"));
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
@@ -107,8 +107,16 @@ public class GroupRepository {
 		return group;
 	}
 	
+	public static void delStudentInGroup(String studentID) {
+		HashMap<Integer, Object> params = new HashMap<>();
+		params.put(1, studentID);
+		String delStudentInGroupSQL = "DELETE FROM StudentInGroup WHERE studentID = ?";
+		DatabaseHelper.getInstance().setQuery(delStudentInGroupSQL, params);
+		DatabaseHelper.getInstance().updateData();
+	}
+	
 	public static void delGroup(String groupID) {
-		
+				
 		HashMap<Integer, Object> params = new HashMap<>();
 		params.put(1, groupID);
 		String delGroupStudentSQL = "DELETE FROM GroupStudent WHERE groupID = ?";
@@ -119,18 +127,14 @@ public class GroupRepository {
 		DatabaseHelper.getInstance().setQuery(delGroupStudentClassSQL, params);
 		DatabaseHelper.getInstance().updateData();
 		
+		String delStudentInGroupSQL = "DELETE FROM StudentInGroup WHERE groupID = ?";
+		DatabaseHelper.getInstance().setQuery(delStudentInGroupSQL, params);
+		DatabaseHelper.getInstance().updateData();
+		
 		String delGroupSQL = "DELETE FROM NGroup WHERE groupID = ?";
 		DatabaseHelper.getInstance().setQuery(delGroupSQL, params);
 		DatabaseHelper.getInstance().updateData();
 				
-	}
-	
-	public static void delStudentInGroup(String studentID) {
-		HashMap<Integer, Object> params = new HashMap<>();
-		params.put(1, studentID);
-		String delStudentInGroupSQL = "DELETE FROM StudentInGroup WHERE studentID = ?";
-		DatabaseHelper.getInstance().setQuery(delStudentInGroupSQL, params);
-		DatabaseHelper.getInstance().updateData();
 	}
 	
 	public static List<String> groupInvole(String studentID, String classID) {
@@ -152,6 +156,8 @@ public class GroupRepository {
 		return group;
 	}
 	
+	
+	
 	public static void saveGroup(Group group) {
 		
 		String updateGroupStatusSQL = "UPDATE NGroup SET status = ? WHERE groupID = ?";
@@ -167,13 +173,13 @@ public class GroupRepository {
 		DatabaseHelper.getInstance().setQuery(delGroupStudentSQL, params);
 		DatabaseHelper.getInstance().updateData();
 		
-		List<String> students = Arrays.asList(group.getGroupID().split("^"));
+		List<String> students = Arrays.asList(group.getGroupID().split("-"));
 		String updateVoteSQL = "INSERT INTO GroupStudent VALUES (?, ?, ?)";
 		for (String studentID : students) {
 			params.clear();
 			params.put(1, group.getGroupID());
 			params.put(2, studentID);
-			params.put(3, group.getVoteYes().contains(studentID));
+			params.put(3, Boolean.valueOf(group.getVoteYes().contains(studentID)));
 			DatabaseHelper.getInstance().setQuery(updateVoteSQL, params);
 			DatabaseHelper.getInstance().updateData();
 		}
